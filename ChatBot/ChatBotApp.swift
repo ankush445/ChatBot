@@ -12,8 +12,8 @@ import SwiftData
 struct ChatBotApp: App {
     private var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            StoredChatSession.self as any PersistentModel.Type,
-            StoredChatMessage.self as any PersistentModel.Type
+            StoredChatSession.self,
+            StoredChatMessage.self
         ])
 
         return try! ModelContainer(for: schema)

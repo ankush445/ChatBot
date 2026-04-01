@@ -9,6 +9,8 @@
 import SwiftUI
 import FoundationModels
 import SwiftData
+import PhotosUI
+import UIKit
 
 @MainActor
 @Observable
@@ -18,6 +20,10 @@ class ChatViewModel {
     var messages: [ChatMessage] = []
     var userInput: String = ""
     var isResponding = false
+    var selectedImage: UIImage?
+    var imageAnalysisSummary: String?
+    var imageAnalysisStatus: String?
+    var isAnalyzingImage = false
     
     var partial: String.PartiallyGenerated?
     var partialId: UUID?
@@ -26,6 +32,7 @@ class ChatViewModel {
     private var streamingTask: Task<Void, Never>?
     private var modelContext: ModelContext?
     private var hasLoadedHistory = false
+    private let imageAnalyzer = ImageVisionAnalyzer()
 
     var currentSessionTitle: String {
         currentSession?.title ?? "ChatBot"
@@ -46,21 +53,42 @@ class ChatViewModel {
     }
 
     func sendMessage() {
-        
         guard !isResponding else { return }
         guard currentSession != nil else { return }
+
         let trimmedInput = userInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedInput.isEmpty else { return }
-        
+        let selectedImage = selectedImage
+        let selectedImageData = selectedImage?.jpegData(compressionQuality: 0.85)
+        let cachedImageSummary = imageAnalysisSummary
+
+        guard !trimmedInput.isEmpty || selectedImage != nil else { return }
+
         isResponding = true
-        let prompt = promptForConversation(adding: trimmedInput)
-        
-        appendAndPersist(ChatMessage(sender: .user, content: trimmedInput))
-        
         self.userInput = ""
-        
+
         streamingTask = Task {
             do {
+                let hiddenVisionContext = try await buildHiddenVisionContext(
+                    text: trimmedInput,
+                    image: selectedImage,
+                    cachedSummary: cachedImageSummary
+                )
+                let visibleUserMessage = trimmedInput
+                let prompt = promptForConversation(
+                    adding: visibleUserMessage,
+                    hiddenContext: hiddenVisionContext
+                )
+
+                appendAndPersist(
+                    ChatMessage(
+                        sender: .user,
+                        content: visibleUserMessage,
+                        imageData: selectedImageData,
+                        hiddenContext: hiddenVisionContext
+                    )
+                )
+                clearSelectedImage()
+
                 let stream = LanguageModelSession().streamResponse(to: prompt)
                 self.partialId = UUID()
                 
@@ -79,7 +107,10 @@ class ChatViewModel {
                 )
                 
             } catch {
-                
+                if !trimmedInput.isEmpty {
+                    self.userInput = trimmedInput
+                }
+
                 let errorMessage: String
 
                 if let error = error as? FoundationModels.LanguageModelSession.GenerationError {
@@ -117,6 +148,8 @@ class ChatViewModel {
                         errorMessage = "Something went wrong. Please try again."
                     }
                     
+                } else if let error = error as? ImageVisionAnalyzer.AnalysisError {
+                    errorMessage = error.errorDescription ?? "The selected image could not be analyzed."
                 } else {
                     errorMessage = "Unexpected error occurred. Please try again."
                 }
@@ -138,6 +171,45 @@ class ChatViewModel {
                 self.streamingTask = nil
             }
         }
+    }
+
+    func loadSelectedImage(from item: PhotosPickerItem?) async {
+        guard let item else {
+            clearSelectedImage()
+            return
+        }
+
+        isAnalyzingImage = true
+        imageAnalysisStatus = "Preparing image..."
+        imageAnalysisSummary = nil
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else {
+                throw ImageVisionAnalyzer.AnalysisError.invalidImage
+            }
+
+            selectedImage = image
+            imageAnalysisStatus = "Reading image with Vision..."
+
+            let analysis = try await imageAnalyzer.analyze(image)
+            imageAnalysisSummary = analysis.summary
+            imageAnalysisStatus = analysis.statusLine
+        } catch {
+            imageAnalysisSummary = nil
+
+            if let error = error as? ImageVisionAnalyzer.AnalysisError {
+                imageAnalysisStatus = error.errorDescription
+            } else {
+                imageAnalysisStatus = "The selected image could not be analyzed."
+            }
+        }
+
+        isAnalyzingImage = false
+    }
+
+    func removeSelectedImage() {
+        clearSelectedImage()
     }
     
     func startNewChat() {
@@ -192,8 +264,8 @@ class ChatViewModel {
     }
 
     private func cancelStreaming() {
-        messages = []
         userInput = ""
+        clearSelectedImage()
         isResponding = false
         partial = nil
         partialId = nil
@@ -205,6 +277,40 @@ class ChatViewModel {
     private func appendAndPersist(_ message: ChatMessage) {
         messages.append(message)
         persist(message)
+    }
+
+    private func buildHiddenVisionContext(
+        text: String,
+        image: UIImage?,
+        cachedSummary: String?
+    ) async throws -> String {
+        let normalizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var parts: [String] = []
+
+        if let image {
+            let summary: String
+
+            if let cachedSummary, !cachedSummary.isEmpty {
+                summary = cachedSummary
+            } else {
+                self.isAnalyzingImage = true
+                self.imageAnalysisStatus = "Reading image with Vision..."
+                defer { self.isAnalyzingImage = false }
+
+                let analysis = try await imageAnalyzer.analyze(image)
+                self.imageAnalysisSummary = analysis.summary
+                self.imageAnalysisStatus = analysis.statusLine
+                summary = analysis.summary
+            }
+
+            let imageSection = """
+            Attached image context extracted with Vision:
+            \(summary)
+            """
+            parts.append(imageSection)
+        }
+
+        return parts.joined(separator: "\n\n")
     }
 
     private func persist(_ message: ChatMessage) {
@@ -245,8 +351,12 @@ class ChatViewModel {
         }
     }
 
-    private func promptForConversation(adding latestUserInput: String) -> String {
-        guard !messages.isEmpty else { return latestUserInput }
+    private func promptForConversation(
+        adding latestUserInput: String,
+        hiddenContext: String?
+    ) -> String {
+        let latestPrompt = promptText(for: latestUserInput, hiddenContext: hiddenContext)
+        guard !messages.isEmpty else { return latestPrompt }
 
         var lines = [
             "Continue the conversation below and answer the latest user message naturally.",
@@ -255,10 +365,10 @@ class ChatViewModel {
 
         for message in messages {
             let role = message.sender == .user ? "User" : "Assistant"
-            lines.append("\(role): \(message.content)")
+            lines.append("\(role): \(promptText(for: message.content, hiddenContext: message.hiddenContext))")
         }
 
-        lines.append("User: \(latestUserInput)")
+        lines.append("User: \(latestPrompt)")
         lines.append("Assistant:")
 
         return lines.joined(separator: "\n")
@@ -266,11 +376,34 @@ class ChatViewModel {
 
     private func sessionTitle(from content: String) -> String {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "New Chat" }
+        guard !trimmed.isEmpty else { return "Image" }
 
         let limit = 40
         let prefix = String(trimmed.prefix(limit))
         return trimmed.count > limit ? "\(prefix)..." : prefix
+    }
+
+    private func clearSelectedImage() {
+        selectedImage = nil
+        imageAnalysisSummary = nil
+        imageAnalysisStatus = nil
+        isAnalyzingImage = false
+    }
+
+    private func promptText(for content: String, hiddenContext: String?) -> String {
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedHiddenContext = hiddenContext?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        switch (trimmedContent.isEmpty, trimmedHiddenContext.isEmpty) {
+        case (false, false):
+            return "\(trimmedContent)\n\n\(trimmedHiddenContext)"
+        case (false, true):
+            return trimmedContent
+        case (true, false):
+            return trimmedHiddenContext
+        case (true, true):
+            return ""
+        }
     }
 }
 

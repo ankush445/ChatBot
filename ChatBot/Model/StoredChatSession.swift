@@ -35,6 +35,18 @@ final class StoredChatSession {
     }
 
     var previewText: String {
-        sortedMessages.last?.content ?? "No messages yet"
+        guard let lastMessage = sortedMessages.last else {
+            return "No messages yet"
+        }
+
+        if !lastMessage.content.isEmpty {
+            return lastMessage.content
+        }
+
+        if lastMessage.imageData != nil {
+            return "Image"
+        }
+
+        return "No messages yet"
     }
 }

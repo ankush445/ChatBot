@@ -13,6 +13,8 @@ final class StoredChatMessage {
     @Attribute(.unique) var id: UUID
     var senderRawValue: String
     var content: String
+    @Attribute(.externalStorage) var imageData: Data?
+    var hiddenContext: String?
     var timestamp: Date
     var session: StoredChatSession?
 
@@ -20,12 +22,16 @@ final class StoredChatMessage {
         id: UUID = UUID(),
         sender: ChatMessage.Sender,
         content: String,
+        imageData: Data? = nil,
+        hiddenContext: String? = nil,
         timestamp: Date = Date(),
         session: StoredChatSession? = nil
     ) {
         self.id = id
         self.senderRawValue = sender.rawValue
         self.content = content
+        self.imageData = imageData
+        self.hiddenContext = hiddenContext
         self.timestamp = timestamp
         self.session = session
     }
@@ -35,6 +41,8 @@ final class StoredChatMessage {
             id: message.id,
             sender: message.sender,
             content: message.content,
+            imageData: message.imageData,
+            hiddenContext: message.hiddenContext,
             timestamp: message.timestamp,
             session: session
         )
@@ -44,6 +52,8 @@ final class StoredChatMessage {
         ChatMessage(
             sender: ChatMessage.Sender(rawValue: senderRawValue) ?? .assistant,
             content: content,
+            imageData: imageData,
+            hiddenContext: hiddenContext,
             timestamp: timestamp,
             id: id
         )

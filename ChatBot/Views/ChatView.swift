@@ -20,8 +20,7 @@ struct ChatView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
                 ForEach(messages) { message in
-                    MarkdownText(markdown: message.content)
-                        .modifier(StreamingViewModifier(sender: message.sender))
+                    ChatMessageBubble(message: message)
                 }
                 
                 if let partial, let id = partialId {
@@ -35,6 +34,26 @@ struct ChatView: View {
             .padding()
             .padding(.bottom, 100)
         }
+    }
+}
+
+struct ChatMessageBubble: View {
+    let message: ChatMessage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let image = message.uiImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            if !message.content.isEmpty {
+                MarkdownText(markdown: message.content)
+            }
+        }
+        .modifier(StreamingViewModifier(sender: message.sender))
     }
 }
 
@@ -59,7 +78,7 @@ struct StreamingViewModifier: ViewModifier {
         content
             .padding()
             .background(sender == .user ? Color.blue.opacity(0.3) : Color.gray.opacity(0.3))
-            .cornerRadius(12)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(sender == .user ? .leading : .trailing, 20)
             .frame(maxWidth: .infinity,
                    alignment: sender == .user ? .trailing : .leading)

@@ -17,16 +17,27 @@ struct ChatMessage: Identifiable, Codable {
     let id: UUID
     let sender: Sender
     let content: String
+    let imageData: Data?
+    let hiddenContext: String?
     let timestamp: Date
     
     init(sender: Sender,
          content: String,
+         imageData: Data? = nil,
+         hiddenContext: String? = nil,
          timestamp: Date = Date(),
          id: UUID = UUID()) {
         self.sender = sender
         self.content = content
+        self.imageData = imageData
+        self.hiddenContext = hiddenContext
         self.timestamp = timestamp
         self.id = id
+    }
+
+    var uiImage: UIImage? {
+        guard let imageData else { return nil }
+        return UIImage(data: imageData)
     }
 }
 
