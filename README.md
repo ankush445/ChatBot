@@ -36,7 +36,9 @@ This keeps the UI clean while still allowing the assistant to respond intelligen
 
 - `ChatBot/Views`: UI screens and chat rendering
 - `ChatBot/View Model`: chat state and prompt orchestration
-- `ChatBot/Model`: message and session persistence models
+- `ChatBot/Model`: app-facing message and session models plus schema helpers
+- `ChatBot/Model/Schema`: SwiftData migration plan and current schema aliases
+- `ChatBot/Model/Schema/Versions`: versioned SwiftData schemas used for migration safety
 - `ChatBot/ImageVisionAnalyzer.swift`: OCR and image classification helper
 
 ## Requirements
@@ -51,3 +53,4 @@ This keeps the UI clean while still allowing the assistant to respond intelligen
 - Chat sessions are stored locally.
 - Uploaded images are stored with chat messages so they can be shown again in chat history.
 - Vision extraction is hidden from the user interface and only used internally for better responses.
+- SwiftData uses a versioned migration structure so future updates are safer for existing users.

@@ -11,12 +11,13 @@ import SwiftData
 @main
 struct ChatBotApp: App {
     private var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            StoredChatSession.self,
-            StoredChatMessage.self
-        ])
-
-        return try! ModelContainer(for: schema)
+        let schema = Schema(versionedSchema: ChatBotSchemaV2.self)
+        let configuration = ModelConfiguration(schema: schema)
+        return try! ModelContainer(
+            for: schema,
+            migrationPlan: ChatBotMigrationPlan.self,
+            configurations: [configuration]
+        )
     }()
 
     var body: some Scene {

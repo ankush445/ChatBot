@@ -8,38 +8,11 @@
 import Foundation
 import SwiftData
 
-@Model
-final class StoredChatMessage {
-    @Attribute(.unique) var id: UUID
-    var senderRawValue: String
-    var content: String
-    @Attribute(.externalStorage) var imageData: Data?
-    var hiddenContext: String?
-    var timestamp: Date
-    var session: StoredChatSession?
-
-    init(
-        id: UUID = UUID(),
-        sender: ChatMessage.Sender,
-        content: String,
-        imageData: Data? = nil,
-        hiddenContext: String? = nil,
-        timestamp: Date = Date(),
-        session: StoredChatSession? = nil
-    ) {
-        self.id = id
-        self.senderRawValue = sender.rawValue
-        self.content = content
-        self.imageData = imageData
-        self.hiddenContext = hiddenContext
-        self.timestamp = timestamp
-        self.session = session
-    }
-
+extension StoredChatMessage {
     convenience init(message: ChatMessage, session: StoredChatSession) {
         self.init(
             id: message.id,
-            sender: message.sender,
+            senderRawValue: message.sender.rawValue,
             content: message.content,
             imageData: message.imageData,
             hiddenContext: message.hiddenContext,
