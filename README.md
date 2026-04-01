@@ -34,14 +34,15 @@ This keeps the UI clean while still allowing the assistant to respond intelligen
 
 ## Project Structure
 
-- [`/Users/ios-22/Desktop/ChatBot/ChatBot/Views`](/Users/ios-22/Desktop/ChatBot/ChatBot/Views): UI screens and chat rendering
-- [`/Users/ios-22/Desktop/ChatBot/ChatBot/View Model`](/Users/ios-22/Desktop/ChatBot/ChatBot/View%20Model): chat state and prompt orchestration
-- [`/Users/ios-22/Desktop/ChatBot/ChatBot/Model`](/Users/ios-22/Desktop/ChatBot/ChatBot/Model): message and session persistence models
-- [`/Users/ios-22/Desktop/ChatBot/ChatBot/ImageVisionAnalyzer.swift`](/Users/ios-22/Desktop/ChatBot/ChatBot/ImageVisionAnalyzer.swift): OCR and image classification helper
+- `ChatBot/Views`: UI screens and chat rendering
+- `ChatBot/View Model`: chat state and prompt orchestration
+- `ChatBot/Model`: message and session persistence models
+- `ChatBot/ImageVisionAnalyzer.swift`: OCR and image classification helper
 
 ## Requirements
 
 - Xcode with support for `FoundationModels`
+- Minimum supported device for full Apple Intelligence functionality: `iPhone 15 Pro`
 - iOS device or simulator compatible with the app target
 - Apple Intelligence / system model availability for chat responses
 
