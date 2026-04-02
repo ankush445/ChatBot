@@ -1,6 +1,12 @@
 # ChatBot
 
-`ChatBot` is a SwiftUI iOS app that uses Apple's Foundation Models for on-device chat and SwiftData for local chat history.
+`ChatBot` is a SwiftUI iOS app that uses Apple's Foundation Models for on-device conversations and SwiftData for local chat history.
+
+## Project Demo
+
+[Watch the project demo video](docs/demo/chatbot-demo.mov)
+
+This demo shows how the app works, including chatting, browsing previous sessions, and using image-based context in conversations.
 
 ## Features
 
@@ -22,7 +28,7 @@ The app does not send raw images directly into the language model response pipel
 5. The extracted image context is kept hidden from the user-facing chat bubble.
 6. That hidden context is appended to the model prompt so the assistant can answer questions about the image.
 
-This keeps the UI clean while still allowing the assistant to respond intelligently about uploaded images.
+This keeps the UI clean while still allowing the assistant to respond intelligently to uploaded images.
 
 ## Tech Stack
 
@@ -31,6 +37,14 @@ This keeps the UI clean while still allowing the assistant to respond intelligen
 - Vision
 - PhotosUI
 - SwiftData
+
+## How It Works
+
+1. The user starts a new chat or opens an existing conversation.
+2. Messages are processed with Apple's on-device foundation model support.
+3. Every conversation is saved locally with `SwiftData`.
+4. If the user attaches an image, Vision extracts useful context before the prompt is sent.
+5. The assistant replies using the typed message plus any hidden image context.
 
 ## Project Structure
 
