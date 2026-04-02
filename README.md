@@ -4,9 +4,9 @@
 
 ## Project Demo
 
-[Watch the project demo video](docs/demo/chatbot-demo.mov)
+[![Watch the project demo](docs/demo/chatbot-demo-thumbnail.png)](docs/demo/chatbot-demo.mov)
 
-This demo shows how the app works, including chatting, browsing previous sessions, and using image-based context in conversations.
+Click the preview above to open the full demo video. It shows chatting, browsing previous sessions, and using image-based context in conversations.
 
 ## Features
 
